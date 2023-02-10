@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ricochet2200/go-disk-usage/du"
@@ -53,12 +54,40 @@ func init() {
 }
 
 func main() {
-
+	wg := sync.WaitGroup{}
 	if err := os.MkdirAll(rootDir, os.ModePerm); err != nil {
 		log.Fatal("Unable to create directory: ", err.Error())
 	}
 
 	// create date based directories two days in advance
+	createNewDirForUpcomingDays()
+	wg.Add(1)
+	go runCreateDirectoriesOnDayChange(&wg)
+
+	// go routine to create new directory when day passes, runs every 12hours
+
+	// list and SCP old directories
+	listAndCopyOldDirectories(rootDir)
+
+	// execute ffmpeg command
+
+	// delete old folders if disk space is low
+	printDiskUsage()
+	wg.Wait()
+}
+
+func runCreateDirectoriesOnDayChange(wg *sync.WaitGroup) {
+	defer wg.Done()
+	ticker := time.NewTicker(time.Hour * 12)
+	for {
+		select {
+		case <-ticker.C:
+			createNewDirForUpcomingDays()
+		}
+	}
+}
+
+func createNewDirForUpcomingDays() {
 	now := time.Now()
 	dayDir := getDirName(now)
 	nextDayDir := getDirName(now.AddDate(0, 0, 1))
@@ -75,16 +104,6 @@ func main() {
 	if err := os.MkdirAll(filepath.Join(rootDir, nextToNextDayDir), os.ModePerm); err != nil {
 		log.Fatal("unable to create directory: ", err.Error())
 	}
-
-	// go routine to create new directory when day passes, runs every 12hours
-
-	// list and SCP old directories
-	listAndCopyOldDirectories(rootDir)
-
-	// execute ffmpeg command
-
-	// delete old folders if disk space is low
-	printDiskUsage()
 }
 
 func listAndCopyOldDirectories(rootDir string) {
@@ -105,8 +124,8 @@ func listAndCopyOldDirectories(rootDir string) {
 		dayDirName := getDirName(t)
 
 		for _, folderName := range folderNames {
-			// TODO: skip today's dir
-			if folderName > dayDirName {
+			// skip today and subsequent days dirs
+			if folderName >= dayDirName {
 				log.Println("reached today's directory, skipping copy")
 				break
 			}
@@ -142,7 +161,7 @@ func listAndCopyOldDirectories(rootDir string) {
 			}
 		}
 
-		time.Sleep(time.Minute * 10)
+		time.Sleep(time.Minute * 30)
 	}
 }
 

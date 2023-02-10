@@ -12,4 +12,4 @@ A golang program to constantly listen for USB mic audio and transport generated 
 4. If directory exists, check if all the files in it match check sum with local
 5. If folder does not exist or checksum mismatch, copy entire folder again
 6. Post copy, do verification of remote folder again and if successful, delete the local folder
-7. If all directories older than today is copied to remote host, wait for 10mins and goes to step 1
+7. If all directories older than today is copied to remote host, wait for 30mins and goes to step 1
