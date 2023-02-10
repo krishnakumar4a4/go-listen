@@ -111,7 +111,7 @@ func createNewDirForUpcomingDays() {
 
 func runFFMPEGCommand() {
 	// ffmpeg -f alsa -ac 2 -ar 48000 -i plughw:1 -map 0:0 -acodec libmp3lame   -b:a 96k -f segment -strftime 1 -segment_time 120 -segment_atclocktime 1 %Y%m%d/%H-%M-%S.mp3
-	cmd := exec.Command("ffmpeg", "-f", "alsa", "-ac", "2", "-ar", "48000", "-i", "plughw:1", "-map", "0:0", "-acodec", "libmp3lame", "-b:a", "96k", "-f", "segment", "-strftime", "1", "-segment_time", "120", "-segment_atclocktime", "1", "%Y%m%d/%H-%M-%S.mp3")
+	cmd := exec.Command("ffmpeg", "-f", "alsa", "-ac", "2", "-ar", "48000", "-i", "plughw:1", "-map", "0:0", "-acodec", "libmp3lame", "-b:a", "96k", "-f", "segment", "-strftime", "1", "-segment_time", "120", "-segment_atclocktime", "1", filepath.Join(rootDir, "%Y%m%d/%H-%M-%S.mp3"))
 	wg := &sync.WaitGroup{}
 	stdOutReader, err := cmd.StdoutPipe()
 	if err != nil {
@@ -205,7 +205,6 @@ func listAndCopyOldDirectories(rootDir string, wg *sync.WaitGroup) {
 
 				// rasp-pi:/path-to-recordings
 				remoteHostPath := fmt.Sprintf("%s:%s", remoteHostName, filepath.Join(remoteDirPath))
-
 				// scp -rv /local-dir-for-recordings rasp-pi:/path-to-recordings
 				scpCmdStdOut, err := exec.Command("scp", "-rv", filepath.Join(rootDir, folderName), remoteHostPath).Output()
 				if err != nil {
