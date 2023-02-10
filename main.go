@@ -135,29 +135,34 @@ func listAndCopyOldDirectories(rootDir string) {
 			verify := verifyFilesWithDestination(rootDir, folderName)
 			log.Printf("verifyFilesWithDestination for %s is: %v \n", folderName, verify)
 
-			// scp files
-			log.Printf("started copying %s \n", folderName)
+			if !verify {
+				// scp files
+				log.Printf("started copying %s \n", folderName)
 
-			// rasp-pi:/path-to-recordings
-			remoteHostPath := fmt.Sprintf("%s:%s", remoteHostName, filepath.Join(remoteDirPath))
+				// rasp-pi:/path-to-recordings
+				remoteHostPath := fmt.Sprintf("%s:%s", remoteHostName, filepath.Join(remoteDirPath))
 
-			// scp -rv /local-dir-for-recordings rasp-pi:/path-to-recordings
-			scpCmdStdOut, err := exec.Command("scp", "-rv", filepath.Join(rootDir, folderName), remoteHostPath).Output()
-			if err != nil {
-				log.Fatal("unable to copy folder to remote using scp: ", err.Error())
+				// scp -rv /local-dir-for-recordings rasp-pi:/path-to-recordings
+				scpCmdStdOut, err := exec.Command("scp", "-rv", filepath.Join(rootDir, folderName), remoteHostPath).Output()
+				if err != nil {
+					log.Fatal("unable to copy folder to remote using scp: ", err.Error())
+				}
+				log.Printf("successfully copied %s folder to remote\n", folderName)
+				log.Println("scp output", scpCmdStdOut)
+
+				// verify copied folder
+				log.Printf("started veryfying %s after copy to remote\n", folderName)
+				verify = verifyFilesWithDestination(rootDir, folderName)
+				log.Printf("verifyFilesWithDestination for %s is: %v \n", folderName, verify)
+
 			}
-			log.Printf("successfully copied %s folder to remote\n", folderName)
-			log.Println("scp output", scpCmdStdOut)
-
-			// verify copied folder
-			log.Printf("started veryfying %s after copy to remote\n", folderName)
-			verify = verifyFilesWithDestination(rootDir, folderName)
-			log.Printf("verifyFilesWithDestination for %s is: %v \n", folderName, verify)
 
 			// delete source files
 			if verify {
 				log.Printf("deleting local folder %s as its copied to remote and verified", folderName)
-				//TODO: Delete folder
+				if err := os.RemoveAll(filepath.Join(rootDir, folderName)); err != nil {
+					log.Printf("failed to local folder %s after its copied to remote and verified", folderName)
+				}
 			}
 		}
 
