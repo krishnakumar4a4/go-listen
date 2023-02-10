@@ -1,0 +1,22 @@
+[Unit]
+Description=Go Listen Service
+ConditionPathExists=/<path-to-ur-binary>/go-listen
+After=network.target
+
+[Service]
+Type=simple
+User=<user-name-to-run-the-program>
+Group=<users-group-name>
+Environment=LOCAL_DIR=go-listen-recordings
+Environment=REMOTE_HOST=rasp-pi
+Environment=REMOTE_HOST_DIR=<full-path-to-remote-destination-dir>
+WorkingDirectory=<path-to-working-dir>
+ExecStart=<path-to-go-listen-binary>
+Restart=on-failure
+RestartSec=600
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=go-listener
+
+[Install]
+WantedBy=multi-user.target

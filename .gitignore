@@ -15,3 +15,4 @@
 # vendor/
 go-listen
 go-listen-recordings/
+go-listen.service
