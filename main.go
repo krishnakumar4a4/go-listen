@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
@@ -67,9 +68,11 @@ func main() {
 	// go routine to create new directory when day passes, runs every 12hours
 
 	// list and SCP old directories
-	listAndCopyOldDirectories(rootDir)
+	wg.Add(1)
+	go listAndCopyOldDirectories(rootDir, &wg)
 
 	// execute ffmpeg command
+	runFFMPEGCommand()
 
 	// delete old folders if disk space is low
 	printDiskUsage()
@@ -106,7 +109,68 @@ func createNewDirForUpcomingDays() {
 	}
 }
 
-func listAndCopyOldDirectories(rootDir string) {
+func runFFMPEGCommand() {
+	// ffmpeg -f alsa -ac 2 -ar 48000 -i plughw:1 -map 0:0 -acodec libmp3lame   -b:a 96k -f segment -strftime 1 -segment_time 120 -segment_atclocktime 1 %Y%m%d/%H-%M-%S.mp3
+	cmd := exec.Command("ffmpeg", "-f", "alsa", "-ac", "2", "-ar", "48000", "-i", "plughw:1", "-map", "0:0", "-acodec", "libmp3lame", "-b:a", "96k", "-f", "segment", "-strftime", "1", "-segment_time", "120", "-segment_atclocktime", "1", "%Y%m%d/%H-%M-%S.mp3")
+	wg := &sync.WaitGroup{}
+	stdOutReader, err := cmd.StdoutPipe()
+	if err != nil {
+		log.Fatalf("unable to open stdout pipe: %s", err.Error())
+		return
+	}
+	wg.Add(1)
+	go logStdOut(wg, stdOutReader)
+
+	stdErrReader, err := cmd.StderrPipe()
+	if err != nil {
+		log.Fatalf("unable to open stderr pipe: %s", err.Error())
+		return
+	}
+	wg.Add(1)
+	go logStdErr(wg, stdErrReader)
+
+	if err := cmd.Run(); err != nil {
+		log.Fatal("error running ffmpeg command", err.Error())
+	}
+	wg.Wait()
+}
+
+func logStdOut(wg *sync.WaitGroup, readCloser io.ReadCloser) {
+	defer readCloser.Close()
+	defer wg.Done()
+
+	fileScanner := bufio.NewScanner(readCloser)
+	fileScanner.Split(bufio.ScanLines)
+
+	for fileScanner.Scan() {
+		log.Println("STDOUT: " + fileScanner.Text())
+	}
+
+	if err := fileScanner.Err(); err != nil {
+		log.Printf("unable to command stdout: %s \n", err.Error())
+		return
+	}
+}
+
+func logStdErr(wg *sync.WaitGroup, readCloser io.ReadCloser) {
+	defer readCloser.Close()
+	defer wg.Done()
+
+	fileScanner := bufio.NewScanner(readCloser)
+	fileScanner.Split(bufio.ScanLines)
+
+	for fileScanner.Scan() {
+		log.Println("STDERR: " + fileScanner.Text())
+	}
+
+	if err := fileScanner.Err(); err != nil {
+		log.Printf("unable to command stderr: %s \n", err.Error())
+		return
+	}
+}
+
+func listAndCopyOldDirectories(rootDir string, wg *sync.WaitGroup) {
+	defer wg.Done()
 	for {
 		// list directory
 		folders, err := os.ReadDir(rootDir)
