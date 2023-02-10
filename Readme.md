@@ -13,3 +13,9 @@ A golang program to constantly listen for USB mic audio and transport generated 
 5. If folder does not exist or checksum mismatch, copy entire folder again
 6. Post copy, do verification of remote folder again and if successful, delete the local folder
 7. If all directories older than today is copied to remote host, wait for 30mins and goes to step 1
+
+
+## Next steps
+- Make SCP errors independent of ffmpeg audio collection
+- Exponential back off and retry when NAS is down 
+- When disk space is running low delete oldest recordings (file rotation)
